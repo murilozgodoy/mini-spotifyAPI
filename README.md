@@ -6,12 +6,16 @@ API REST desenvolvida com Spring Boot que simula funcionalidades básicas de uma
 
 A aplicação permite o gerenciamento de usuários, artistas, álbuns, músicas e playlists, além de implementar regras de negócio como reprodução de músicas, gerenciamento de playlists e geração de relatórios.
 
+🚀 Nesta versão, a aplicação foi evoluída para utilizar persistência em banco de dados PostgreSQL com Spring Data JPA, substituindo o armazenamento em memória (HashMap).
+
 ---
 
 ## 🚀 Tecnologias Utilizadas
 
 * Java 25
 * Spring Boot
+* Spring Data JPA
+* PostgreSQL (Aiven)
 * Maven
 * Postman (para testes)
 
@@ -19,15 +23,16 @@ A aplicação permite o gerenciamento de usuários, artistas, álbuns, músicas 
 
 ## 📁 Estrutura do Projeto
 
-```
+
 src/main/java/com/insper/spotifyAPI
 │
 ├── controller/
 ├── service/
 ├── model/
+├── repository/
 ├── dto/
 ├── enums/
-```
+
 
 ---
 
@@ -35,17 +40,35 @@ src/main/java/com/insper/spotifyAPI
 
 ### 1. Clonar o repositório
 
-```
+
 git clone <url-do-repositorio>
-```
+
 
 ### 2. Entrar na pasta do projeto
 
-```
-cd spotifyAPI
-```
 
-### 3. Rodar a aplicação
+cd spotifyAPI
+
+
+### 3. Configurar o banco de dados
+
+No arquivo `application.properties`, configure:
+
+
+spring.datasource.url=jdbc:postgresql://<host>:<porta>/defaultdb?sslmode=require
+spring.datasource.username=<usuario>
+spring.datasource.password=<senha>
+
+
+💡 Recomendado utilizar variável de ambiente:
+
+
+spring.datasource.password=${DB_PASSWORD}
+
+
+---
+
+### 4. Rodar a aplicação
 
 Via IDE (recomendado):
 
@@ -53,17 +76,17 @@ Via IDE (recomendado):
 
 Ou via terminal:
 
-```
+
 mvn spring-boot:run
-```
+
 
 ---
 
 ## 🌐 URL Base
 
-```
+
 http://localhost:8080
-```
+
 
 ---
 
@@ -130,7 +153,7 @@ http://localhost:8080
 * Um artista possui vários álbuns
 * Um álbum possui várias músicas
 * Um usuário possui várias playlists
-* Uma playlist possui várias músicas
+* Uma playlist possui várias músicas (N:N)
 
 ---
 
@@ -200,15 +223,15 @@ http://localhost:8080
 
 ### ▶️ Reproduzir Música
 
-```
+
 POST /musicas/{id}/reproduzir
-```
+
 
 Header obrigatório:
 
-```
+
 X-USER-ID: {idUsuario}
-```
+
 
 Regras:
 
@@ -219,15 +242,15 @@ Regras:
 
 ### ➕ Adicionar Música à Playlist
 
-```
+
 POST /playlists/{playlistId}/musicas/{musicaId}
-```
+
 
 Header obrigatório:
 
-```
+
 X-USER-ID: {idUsuario}
-```
+
 
 Regras:
 
@@ -239,9 +262,9 @@ Regras:
 
 ### 📊 Top 10 Músicas Mais Reproduzidas
 
-```
+
 GET /relatorios/top-musicas
-```
+
 
 Retorna:
 
@@ -256,6 +279,7 @@ Retorna:
 * Exclusão lógica (uso de campo `ativo`)
 * Entidades inativas não podem ser utilizadas
 * Validações realizadas no Service
+* Persistência realizada via PostgreSQL + JPA
 
 ---
 
@@ -263,10 +287,15 @@ Retorna:
 
 Todos os endpoints foram testados utilizando o Postman.
 
-Uma coleção com as requisições pode ser importada para facilitar os testes.
+Foram validados:
+
+* criação de entidades
+* relacionamentos
+* regras de negócio
+* persistência no banco de dados
 
 ---
 
 ## 👨‍💻 Autor
 
-Murilo Godoy
+Murilo Godoy 🚀
