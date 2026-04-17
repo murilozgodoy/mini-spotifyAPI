@@ -1,15 +1,47 @@
 package com.insper.spotifyAPI.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+
+import java.util.List;
+
+@Entity
+@Table(name = "musicas")
 public class Musica {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, unique = true)
     private String titulo;
+
+    @Column(nullable = false)
     private Integer duracaoSegundos;
+
+    @Column(nullable = false)
     private Integer numeroFaixa;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "album_id", nullable = false)
+    @JsonIgnoreProperties({"musicas", "artista"})
     private Album album;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "artista_id", nullable = false)
+    @JsonIgnoreProperties({"albuns", "musicas"})
     private Artista artista;
+
+    @Column(nullable = false)
     private Long totalReproducoes;
+
+    @Column(nullable = false)
     private Boolean ativo;
+
+    @ManyToMany(mappedBy = "musicas")
+    @JsonIgnore
+    private List<Playlist> playlists;
 
     public Musica() {
     }
@@ -30,9 +62,7 @@ public class Musica {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public void setId(Long id) { this.id = id; }
 
     public String getTitulo() {
         return titulo;
@@ -88,5 +118,13 @@ public class Musica {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public List<Playlist> getPlaylists() {
+        return playlists;
+    }
+
+    public void setPlaylists(List<Playlist> playlists) {
+        this.playlists = playlists;
     }
 }

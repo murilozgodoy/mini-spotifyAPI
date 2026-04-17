@@ -1,14 +1,35 @@
 package com.insper.spotifyAPI.model;
 
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+@Table(name = "albuns")
 public class Album {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, unique = true)
     private String titulo;
+
     private LocalDate dataLancamento;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "artista_id", nullable = false)
+    @JsonIgnoreProperties({"albuns", "musicas"})
     private Artista artista;
+
+    @Column(nullable = false)
     private Boolean ativo;
+
+    @OneToMany(mappedBy = "album")
+    @JsonIgnoreProperties({"album", "artista"})
+    private List<Musica> musicas;
 
     public Album() {
     }
@@ -25,9 +46,7 @@ public class Album {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public void setId(Long id) { this.id = id; }
 
     public String getTitulo() {
         return titulo;
@@ -59,5 +78,13 @@ public class Album {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public List<Musica> getMusicas() {
+        return musicas;
+    }
+
+    public void setMusicas(List<Musica> musicas) {
+        this.musicas = musicas;
     }
 }

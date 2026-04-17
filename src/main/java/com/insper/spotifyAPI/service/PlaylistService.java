@@ -3,29 +3,35 @@ package com.insper.spotifyAPI.service;
 import com.insper.spotifyAPI.model.Musica;
 import com.insper.spotifyAPI.model.Playlist;
 import com.insper.spotifyAPI.model.Usuario;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.insper.spotifyAPI.repository.PlaylistRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class PlaylistService {
 
-    private final Map<Long, Playlist> playlists = new HashMap<>();
-    private Long proximoId = 1L;
+    private final PlaylistRepository playlistRepository;
+    private final UsuarioService usuarioService;
+    private final MusicaService musicaService;
 
-    @Autowired
-    private UsuarioService usuarioService;
-
-    @Autowired
-    private MusicaService musicaService;
+    public PlaylistService(
+            PlaylistRepository playlistRepository,
+            UsuarioService usuarioService,
+            MusicaService musicaService
+    ) {
+        this.playlistRepository = playlistRepository;
+        this.usuarioService = usuarioService;
+        this.musicaService = musicaService;
+    }
 
     public Playlist criarPlaylist(Playlist playlist) {
-        if (playlist.getUsuario() == null || playlist.getUsuario().getId() == null) {
+        if (playlist == null
+                || playlist.getNome() == null || playlist.getNome().isBlank()
+                || playlist.getPublica() == null
+                || playlist.getUsuario() == null || playlist.getUsuario().getId() == null) {
             return null;
         }
 
@@ -35,50 +41,69 @@ public class PlaylistService {
             return null;
         }
 
-        playlist.setId(proximoId++);
+        if (playlistRepository.existsByNomeIgnoreCase(playlist.getNome())) {
+            return null;
+        }
+
+        playlist.setId(null);
         playlist.setDataCriacao(LocalDateTime.now());
         playlist.setUsuario(usuario);
-        playlist.setMusicas(new ArrayList<>());
         playlist.setAtivo(true);
 
-        playlists.put(playlist.getId(), playlist);
-        return playlist;
+        if (playlist.getMusicas() == null) {
+            playlist.setMusicas(new ArrayList<>());
+        }
+
+        return playlistRepository.save(playlist);
     }
 
     public List<Playlist> listarPlaylists() {
-        return new ArrayList<>(playlists.values());
+        return playlistRepository.findByAtivoTrue();
     }
 
     public Playlist buscarPorId(Long id) {
-        return playlists.get(id);
+        return playlistRepository.findById(id)
+                .filter(playlist -> Boolean.TRUE.equals(playlist.getAtivo()))
+                .orElse(null);
     }
 
     public Playlist atualizarPlaylist(Long id, Playlist novaPlaylist) {
-        Playlist existente = playlists.get(id);
+        Playlist existente = playlistRepository.findById(id).orElse(null);
 
-        if (existente == null) {
+        if (existente == null || Boolean.FALSE.equals(existente.getAtivo())) {
+            return null;
+        }
+
+        if (novaPlaylist == null
+                || novaPlaylist.getNome() == null || novaPlaylist.getNome().isBlank()
+                || novaPlaylist.getPublica() == null) {
+            return null;
+        }
+
+        if (!existente.getNome().equalsIgnoreCase(novaPlaylist.getNome())
+                && playlistRepository.existsByNomeIgnoreCase(novaPlaylist.getNome())) {
             return null;
         }
 
         existente.setNome(novaPlaylist.getNome());
         existente.setPublica(novaPlaylist.getPublica());
 
-        return existente;
+        return playlistRepository.save(existente);
     }
 
     public Playlist deletarPlaylist(Long id) {
-        Playlist playlist = playlists.get(id);
+        Playlist playlist = playlistRepository.findById(id).orElse(null);
 
-        if (playlist == null) {
+        if (playlist == null || Boolean.FALSE.equals(playlist.getAtivo())) {
             return null;
         }
 
         playlist.setAtivo(false);
-        return playlist;
+        return playlistRepository.save(playlist);
     }
 
     public Playlist adicionarMusicaNaPlaylist(Long playlistId, Long musicaId, Long usuarioId) {
-        Playlist playlist = playlists.get(playlistId);
+        Playlist playlist = buscarPorId(playlistId);
 
         if (playlist == null || Boolean.FALSE.equals(playlist.getAtivo())) {
             return null;
@@ -94,6 +119,10 @@ public class PlaylistService {
             return null;
         }
 
+        if (playlist.getMusicas() == null) {
+            playlist.setMusicas(new ArrayList<>());
+        }
+
         for (Musica musicaDaPlaylist : playlist.getMusicas()) {
             if (musicaDaPlaylist.getId().equals(musicaId)) {
                 return null;
@@ -101,6 +130,6 @@ public class PlaylistService {
         }
 
         playlist.getMusicas().add(musica);
-        return playlist;
+        return playlistRepository.save(playlist);
     }
 }

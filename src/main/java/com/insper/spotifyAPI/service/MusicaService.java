@@ -5,37 +5,40 @@ import com.insper.spotifyAPI.model.Album;
 import com.insper.spotifyAPI.model.Artista;
 import com.insper.spotifyAPI.model.Musica;
 import com.insper.spotifyAPI.model.Usuario;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.insper.spotifyAPI.repository.MusicaRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class MusicaService {
 
-    private final Map<Long, Musica> musicas = new HashMap<>();
-    private Long proximoId = 1L;
+    private final MusicaRepository musicaRepository;
+    private final AlbumService albumService;
+    private final ArtistaService artistaService;
+    private final UsuarioService usuarioService;
 
-    @Autowired
-    private AlbumService albumService;
-
-    @Autowired
-    private ArtistaService artistaService;
-
-    @Autowired
-    private UsuarioService usuarioService;
+    public MusicaService(
+            MusicaRepository musicaRepository,
+            AlbumService albumService,
+            ArtistaService artistaService,
+            UsuarioService usuarioService
+    ) {
+        this.musicaRepository = musicaRepository;
+        this.albumService = albumService;
+        this.artistaService = artistaService;
+        this.usuarioService = usuarioService;
+    }
 
     public Musica criarMusica(Musica musica) {
-        if (musica.getAlbum() == null || musica.getAlbum().getId() == null) {
-            return null;
-        }
-
-        if (musica.getArtista() == null || musica.getArtista().getId() == null) {
+        if (musica == null
+                || musica.getTitulo() == null || musica.getTitulo().isBlank()
+                || musica.getDuracaoSegundos() == null || musica.getDuracaoSegundos() < 0
+                || musica.getNumeroFaixa() == null || musica.getNumeroFaixa() < 0
+                || musica.getAlbum() == null || musica.getAlbum().getId() == null
+                || musica.getArtista() == null || musica.getArtista().getId() == null) {
             return null;
         }
 
@@ -50,28 +53,45 @@ public class MusicaService {
             return null;
         }
 
-        musica.setId(proximoId++);
+        if (musicaRepository.existsByTituloIgnoreCase(musica.getTitulo())) {
+            return null;
+        }
+
+        musica.setId(null);
         musica.setAlbum(album);
         musica.setArtista(artista);
         musica.setTotalReproducoes(0L);
         musica.setAtivo(true);
 
-        musicas.put(musica.getId(), musica);
-        return musica;
+        return musicaRepository.save(musica);
     }
 
     public List<Musica> listarMusicas() {
-        return new ArrayList<>(musicas.values());
+        return musicaRepository.findByAtivoTrue();
     }
 
     public Musica buscarPorId(Long id) {
-        return musicas.get(id);
+        return musicaRepository.findById(id)
+                .filter(musica -> Boolean.TRUE.equals(musica.getAtivo()))
+                .orElse(null);
     }
 
     public Musica atualizarMusica(Long id, Musica musicaAtualizada) {
-        Musica musicaExistente = musicas.get(id);
+        Musica musicaExistente = musicaRepository.findById(id).orElse(null);
 
-        if (musicaExistente == null) {
+        if (musicaExistente == null || Boolean.FALSE.equals(musicaExistente.getAtivo())) {
+            return null;
+        }
+
+        if (musicaAtualizada == null
+                || musicaAtualizada.getTitulo() == null || musicaAtualizada.getTitulo().isBlank()
+                || musicaAtualizada.getDuracaoSegundos() == null || musicaAtualizada.getDuracaoSegundos() < 0
+                || musicaAtualizada.getNumeroFaixa() == null || musicaAtualizada.getNumeroFaixa() < 0) {
+            return null;
+        }
+
+        if (!musicaExistente.getTitulo().equalsIgnoreCase(musicaAtualizada.getTitulo())
+                && musicaRepository.existsByTituloIgnoreCase(musicaAtualizada.getTitulo())) {
             return null;
         }
 
@@ -79,22 +99,22 @@ public class MusicaService {
         musicaExistente.setDuracaoSegundos(musicaAtualizada.getDuracaoSegundos());
         musicaExistente.setNumeroFaixa(musicaAtualizada.getNumeroFaixa());
 
-        return musicaExistente;
+        return musicaRepository.save(musicaExistente);
     }
 
     public Musica deletarMusica(Long id) {
-        Musica musica = musicas.get(id);
+        Musica musica = musicaRepository.findById(id).orElse(null);
 
-        if (musica == null) {
+        if (musica == null || Boolean.FALSE.equals(musica.getAtivo())) {
             return null;
         }
 
         musica.setAtivo(false);
-        return musica;
+        return musicaRepository.save(musica);
     }
 
     public Musica reproduzirMusica(Long musicaId, Long usuarioId) {
-        Musica musica = musicas.get(musicaId);
+        Musica musica = buscarPorId(musicaId);
 
         if (musica == null || Boolean.FALSE.equals(musica.getAtivo())) {
             return null;
@@ -107,13 +127,12 @@ public class MusicaService {
         }
 
         musica.setTotalReproducoes(musica.getTotalReproducoes() + 1);
-        return musica;
+        return musicaRepository.save(musica);
     }
 
     public List<TopMusicaDTO> topMusicasMaisReproduzidas() {
-        return musicas.values()
+        return musicaRepository.findByAtivoTrue()
                 .stream()
-                .filter(musica -> !Boolean.FALSE.equals(musica.getAtivo()))
                 .sorted(Comparator.comparing(Musica::getTotalReproducoes).reversed())
                 .limit(10)
                 .map(musica -> new TopMusicaDTO(

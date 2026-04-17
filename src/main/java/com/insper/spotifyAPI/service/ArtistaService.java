@@ -1,39 +1,61 @@
 package com.insper.spotifyAPI.service;
 
 import com.insper.spotifyAPI.model.Artista;
+import com.insper.spotifyAPI.repository.ArtistaRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class ArtistaService {
 
-    private final Map<Long, Artista> artistas = new HashMap<>();
-    private Long proximoId = 1L;
+    private final ArtistaRepository artistaRepository;
+
+    public ArtistaService(ArtistaRepository artistaRepository) {
+        this.artistaRepository = artistaRepository;
+    }
 
     public Artista criarArtista(Artista artista) {
-        artista.setId(proximoId++);
-        artista.setAtivo(true);
+        if (artista == null || artista.getNome() == null || artista.getNome().isBlank()
+                || artista.getGeneroMusical() == null || artista.getGeneroMusical().isBlank()
+                || artista.getPaisOrigem() == null || artista.getPaisOrigem().isBlank()) {
+            return null;
+        }
 
-        artistas.put(artista.getId(), artista);
-        return artista;
+        if (artistaRepository.existsByNomeIgnoreCase(artista.getNome())) {
+            return null;
+        }
+
+        artista.setId(null);
+        artista.setAtivo(true);
+        return artistaRepository.save(artista);
     }
 
     public List<Artista> listarArtistas() {
-        return new ArrayList<>(artistas.values());
+        return artistaRepository.findByAtivoTrue();
     }
 
     public Artista buscarPorId(Long id) {
-        return artistas.get(id);
+        return artistaRepository.findById(id)
+                .filter(artista -> Boolean.TRUE.equals(artista.getAtivo()))
+                .orElse(null);
     }
 
     public Artista atualizarArtista(Long id, Artista artistaAtualizado) {
-        Artista artistaExistente = artistas.get(id);
+        Artista artistaExistente = artistaRepository.findById(id).orElse(null);
 
-        if (artistaExistente == null) {
+        if (artistaExistente == null || Boolean.FALSE.equals(artistaExistente.getAtivo())) {
+            return null;
+        }
+
+        if (artistaAtualizado == null || artistaAtualizado.getNome() == null || artistaAtualizado.getNome().isBlank()
+                || artistaAtualizado.getGeneroMusical() == null || artistaAtualizado.getGeneroMusical().isBlank()
+                || artistaAtualizado.getPaisOrigem() == null || artistaAtualizado.getPaisOrigem().isBlank()) {
+            return null;
+        }
+
+        if (!artistaExistente.getNome().equalsIgnoreCase(artistaAtualizado.getNome())
+                && artistaRepository.existsByNomeIgnoreCase(artistaAtualizado.getNome())) {
             return null;
         }
 
@@ -41,17 +63,17 @@ public class ArtistaService {
         artistaExistente.setGeneroMusical(artistaAtualizado.getGeneroMusical());
         artistaExistente.setPaisOrigem(artistaAtualizado.getPaisOrigem());
 
-        return artistaExistente;
+        return artistaRepository.save(artistaExistente);
     }
 
     public Artista deletarArtista(Long id) {
-        Artista artista = artistas.get(id);
+        Artista artista = artistaRepository.findById(id).orElse(null);
 
-        if (artista == null) {
+        if (artista == null || Boolean.FALSE.equals(artista.getAtivo())) {
             return null;
         }
 
         artista.setAtivo(false);
-        return artista;
+        return artistaRepository.save(artista);
     }
 }

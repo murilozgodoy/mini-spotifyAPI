@@ -1,39 +1,64 @@
 package com.insper.spotifyAPI.service;
 
 import com.insper.spotifyAPI.model.Podcast;
+import com.insper.spotifyAPI.repository.PodcastRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class PodcastService {
 
-    private final Map<Long, Podcast> podcasts = new HashMap<>();
-    private Long proximoId = 1L;
+    private final PodcastRepository podcastRepository;
+
+    public PodcastService(PodcastRepository podcastRepository) {
+        this.podcastRepository = podcastRepository;
+    }
 
     public Podcast criarPodcast(Podcast podcast) {
-        podcast.setId(proximoId++);
+        if (podcast == null
+                || podcast.getTitulo() == null || podcast.getTitulo().isBlank()
+                || podcast.getDescricao() == null || podcast.getDescricao().isBlank()
+                || podcast.getNumeroEpisodios() == null || podcast.getNumeroEpisodios() < 0) {
+            return null;
+        }
+
+        if (podcastRepository.existsByTituloIgnoreCase(podcast.getTitulo())) {
+            return null;
+        }
+
+        podcast.setId(null);
         podcast.setAtivo(true);
 
-        podcasts.put(podcast.getId(), podcast);
-        return podcast;
+        return podcastRepository.save(podcast);
     }
 
     public List<Podcast> listarPodcasts() {
-        return new ArrayList<>(podcasts.values());
+        return podcastRepository.findByAtivoTrue();
     }
 
     public Podcast buscarPorId(Long id) {
-        return podcasts.get(id);
+        return podcastRepository.findById(id)
+                .filter(podcast -> Boolean.TRUE.equals(podcast.getAtivo()))
+                .orElse(null);
     }
 
     public Podcast atualizarPodcast(Long id, Podcast podcastAtualizado) {
-        Podcast podcastExistente = podcasts.get(id);
+        Podcast podcastExistente = podcastRepository.findById(id).orElse(null);
 
-        if (podcastExistente == null) {
+        if (podcastExistente == null || Boolean.FALSE.equals(podcastExistente.getAtivo())) {
+            return null;
+        }
+
+        if (podcastAtualizado == null
+                || podcastAtualizado.getTitulo() == null || podcastAtualizado.getTitulo().isBlank()
+                || podcastAtualizado.getDescricao() == null || podcastAtualizado.getDescricao().isBlank()
+                || podcastAtualizado.getNumeroEpisodios() == null || podcastAtualizado.getNumeroEpisodios() < 0) {
+            return null;
+        }
+
+        if (!podcastExistente.getTitulo().equalsIgnoreCase(podcastAtualizado.getTitulo())
+                && podcastRepository.existsByTituloIgnoreCase(podcastAtualizado.getTitulo())) {
             return null;
         }
 
@@ -41,17 +66,17 @@ public class PodcastService {
         podcastExistente.setDescricao(podcastAtualizado.getDescricao());
         podcastExistente.setNumeroEpisodios(podcastAtualizado.getNumeroEpisodios());
 
-        return podcastExistente;
+        return podcastRepository.save(podcastExistente);
     }
 
     public Podcast deletarPodcast(Long id) {
-        Podcast podcast = podcasts.get(id);
+        Podcast podcast = podcastRepository.findById(id).orElse(null);
 
-        if (podcast == null) {
+        if (podcast == null || Boolean.FALSE.equals(podcast.getAtivo())) {
             return null;
         }
 
         podcast.setAtivo(false);
-        return podcast;
+        return podcastRepository.save(podcast);
     }
 }

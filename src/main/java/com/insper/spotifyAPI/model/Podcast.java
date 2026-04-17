@@ -1,11 +1,25 @@
 package com.insper.spotifyAPI.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "podcasts")
 public class Podcast {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String titulo;
+
+    @Column(nullable = false)
     private String descricao;
+
+    @Column(nullable = false)
     private Integer numeroEpisodios;
+
+    @Column(nullable = false)
     private Boolean ativo;
 
     public Podcast() {
